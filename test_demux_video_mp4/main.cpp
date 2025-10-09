@@ -130,4 +130,4 @@ int main(int argc, char** argv)
 
     printf("parse finish!\n");
     return 0;
-} avio_alloc_context()
+}

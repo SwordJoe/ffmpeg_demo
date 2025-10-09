@@ -35,3 +35,15 @@ target_link_libraries(test_demux_mp4
     "${FFMPEG_LINK_DIR}/swresample.lib"
     "${FFMPEG_LINK_DIR}/avutil.lib"
 )
+
+
+add_executable(test_avio ${CMAKE_CURRENT_SOURCE_DIR}/test_avio/main.cpp)
+target_include_directories(test_avio PRIVATE ${FFMPEG_INCLUDE_DIR})
+target_link_libraries(test_avio 
+    PRIVATE
+    "${FFMPEG_LINK_DIR}/avcodec.lib"
+    "${FFMPEG_LINK_DIR}/avformat.lib"
+    "${FFMPEG_LINK_DIR}/swscale.lib"
+    "${FFMPEG_LINK_DIR}/swresample.lib"
+    "${FFMPEG_LINK_DIR}/avutil.lib"
+)
