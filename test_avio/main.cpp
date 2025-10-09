@@ -13,22 +13,37 @@ static char errbuf[1024];
 //将读取到的MP4文件数据整个都保存在ptr中
 //size表示ptr指向的内存还剩多少没有被ffmpeg读取（还剩多少没有拷贝到ffmpeg的内存中）
 struct opaque_data{
-    uint8_t* ptr;
-    size_t size;  
+    uint8_t* start_ptr; //文件起始
+    uint8_t* cur_ptr;     //当前读取位置
+    size_t total_size;  //文件总大小
+    size_t left_size;   //剩余字节
 };
 
 static int read_packet(void* opaque, uint8_t* buf, int buf_size){
     auto p = (struct opaque_data*)opaque;
-    buf_size = FFMIN(buf_size, p->size);
+    buf_size = FFMIN(buf_size, p->left_size);
     if( buf_size == 0 ){
         return AVERROR_EOF;
     }
 
-    memcpy(buf, p->ptr, buf_size);
-    p->ptr += buf_size;
-    p->size -= buf_size;
+    memcpy(buf, p->cur_ptr, buf_size);
+    p->cur_ptr += buf_size;
+    p->left_size -= buf_size;
 
     return buf_size;
+}
+
+static int64_t seek_packet(void* opaque, int64_t offset, int whence){
+    auto p = (struct opaque_data*)opaque;
+    switch( whence ){
+        case SEEK_SET: p->cur_ptr = p->start_ptr + offset; break;       //从开始出偏移offset
+        case SEEK_CUR: p->cur_ptr += offset; break;                     //从当前位置偏移ofsset
+        case SEEK_END: p->cur_ptr = p->start_ptr + p->total_size + offset; break;   //从末尾偏移offset
+        case AVSEEK_SIZE: return p->total_size; break;
+        default: return -1;
+    }
+    p->left_size = p->start_ptr + p->total_size - p->cur_ptr;
+    return p->cur_ptr - p->start_ptr;
 }
 
 int main(int argc, char** argv)
@@ -61,8 +76,10 @@ int main(int argc, char** argv)
     }
     //将从MP4文件读取到的数据保存到opaque_data结构体中
     //后面AVFormatContext实际就是调用read_packet从这里读取数据
-    opaque.ptr = buf;
-    opaque.size = buf_size;
+    opaque.start_ptr = buf;
+    opaque.cur_ptr = buf;
+    opaque.total_size = buf_size;
+    opaque.left_size = buf_size;
 
     if( !(av_fmt_ctx = avformat_alloc_context()) ){
         ret = AVERROR(ENOMEM);
@@ -75,7 +92,7 @@ int main(int argc, char** argv)
     }
 
     //将AVIOContext上下文和读回调函数进行关联
-    if( !(av_io_ctx = avio_alloc_context(avio_ctx_buf, avio_ctx_buf_size, 0, &opaque, &read_packet, nullptr, nullptr))){
+    if( !(av_io_ctx = avio_alloc_context(avio_ctx_buf, avio_ctx_buf_size, 0, &opaque, &read_packet, nullptr, &seek_packet))){
         ret = AVERROR(ENOMEM);
         goto END;
     }
@@ -86,12 +103,6 @@ int main(int argc, char** argv)
     if( (ret = avformat_open_input(&av_fmt_ctx, nullptr, nullptr, nullptr)) < 0 ){
         av_strerror(ret, errbuf, sizeof(errbuf));
         printf("avformat_open_input error: %s\n", errbuf);
-        goto END;
-    }
-
-    if( (ret = avformat_find_stream_info(av_fmt_ctx, nullptr)) < 0 ){
-        av_strerror(ret, errbuf, sizeof(errbuf));
-        printf("avformat_find_stream_info error: %s\n", errbuf);
         goto END;
     }
 
@@ -136,7 +147,15 @@ int main(int argc, char** argv)
     }
 
     size_t frame_cnt{0};
-    while( av_read_frame(av_fmt_ctx, av_pkt) > 0 ){
+    while( true ){
+        ret = av_read_frame(av_fmt_ctx, av_pkt);
+        if( ret == AVERROR_EOF ){
+            break;
+        } else if( ret < 0 ){
+            av_strerror(ret, errbuf, sizeof(errbuf));
+            printf("av_read_frame error: %s\n", errbuf);
+            goto END;
+        }
         if( av_pkt->stream_index == videoStreamIndex ){
             frame_cnt++;
         }
