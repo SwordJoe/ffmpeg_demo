@@ -5,6 +5,7 @@ extern "C"{
 #include<libavformat/avformat.h>
 #include<libavutil/error.h>
 #include<libavcodec/bsf.h>
+#include<libavcodec/codec.h>
 }
 
 char av_err_buf[1024];
@@ -129,4 +130,4 @@ int main(int argc, char** argv)
 
     printf("parse finish!\n");
     return 0;
-}
+} avio_alloc_context()
