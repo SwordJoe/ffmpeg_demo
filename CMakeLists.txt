@@ -47,3 +47,14 @@ target_link_libraries(test_avio
     "${FFMPEG_LINK_DIR}/swresample.lib"
     "${FFMPEG_LINK_DIR}/avutil.lib"
 )
+
+add_executable(test_encode_pcm2aac ${CMAKE_CURRENT_SOURCE_DIR}/test_encode_audio_pcm2aac/main.cpp)
+target_include_directories(test_encode_pcm2aac PRIVATE ${FFMPEG_INCLUDE_DIR})
+target_link_libraries(test_encode_pcm2aac 
+    PRIVATE
+    "${FFMPEG_LINK_DIR}/avcodec.lib"
+    "${FFMPEG_LINK_DIR}/avformat.lib"
+    "${FFMPEG_LINK_DIR}/swscale.lib"
+    "${FFMPEG_LINK_DIR}/swresample.lib"
+    "${FFMPEG_LINK_DIR}/avutil.lib"
+)

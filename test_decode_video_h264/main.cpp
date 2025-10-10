@@ -29,6 +29,19 @@ static int g_dump_flag = 0;
 static int I_frame_cnt = 0;
 static int framt_type_cnt[7] = {0};
 
+/***
+ * 解析h264裸流，即解析.h264文件。从h264裸流中切割分离出NALU，将NALU送入解码器解码，得到每一帧yuv图像，写入yuv文件
+ * 重要API函数：
+ * avcodec_find_decoder
+ * avcodec_alloc_context3
+ * avcodec_open2
+ * av_parser_init
+ * av_packet_alloc、av_frame_alloc
+ * av_parser_parse2
+ * avcodec_send_packet
+ * avcodec_receive_frame
+*/
+
 int main(int argc, char**argv)
 {
     if( argc != 3){
