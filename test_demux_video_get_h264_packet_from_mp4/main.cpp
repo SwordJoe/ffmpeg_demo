@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
     av_pkt = av_packet_alloc();
     CHECK_AV_ALLOC(av_pkt, "av_packet_alloc");
-    av_init_packet(av_pkt);
+    // av_init_packet(av_pkt);
 
     while(1){
         ret = av_read_frame(av_fmt_ctx, av_pkt);        //av_read_frame将编码包裹读取到av_pkt的buf中，用完后需要我们自己去释放av_pkt里的内存
