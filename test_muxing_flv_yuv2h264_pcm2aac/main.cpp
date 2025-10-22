@@ -188,7 +188,7 @@ int open_codec(OutputContext* out_ctx)
         codec_ctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
         codec_ctx->bit_rate = 191000;
         codec_ctx->time_base = {1, codec_ctx->sample_rate};
-        av_stream->time_base = codec_ctx->time_base;
+        av_stream->time_base = codec_ctx->time_base;        //这里其实可以不进行设置，后面avformat_write_header的时候，封装器可能会改变流的time_base
     }
 
     //设置视频编码器参数
@@ -205,7 +205,7 @@ int open_codec(OutputContext* out_ctx)
         av_opt_set(codec_ctx->priv_data, "tune", "film", 0);
         av_opt_set_double(codec_ctx->priv_data, "crf", 23, 0);
         codec_ctx->time_base = {1, 60};
-        av_stream->time_base = codec_ctx->time_base;
+        av_stream->time_base = codec_ctx->time_base;     //这里其实可以不进行设置，后面avformat_write_header的时候，封装器可能会改变流的time_base
     }
 
     //用给定的编码器codec真正打开并初始化编码器AVCodecContext上下文
@@ -253,6 +253,8 @@ int open_codec(OutputContext* out_ctx)
         }
         out_ctx->av_frame->format = (AVSampleFormat)codec_ctx->sample_fmt;
         out_ctx->av_frame->ch_layout = codec_ctx->ch_layout;
+        //重点：音频每个原始PCM帧的采样点数量，需要等打开AVCodecContext编码器上下后才能知道
+        //nb_samples是针对每个通道而言的样本数量
         out_ctx->av_frame->nb_samples = codec_ctx->frame_size;
         out_ctx->av_frame->sample_rate = codec_ctx->sample_rate;
         //这里根据采样数据格式、通道数、每帧采样点 获取音频帧真正的AVFrame数据空间
@@ -398,10 +400,8 @@ static int encode(OutputContext* out_ctx, AVFormatContext* fmt_ctx)
                     pkt->flags, pkt->pts, pkt->dts, pkt->size);
         }
 
-        //需要指定pkt的stream_index，不然复用器会将音频数据当作视频数据处理
-        if( codec_ctx->codec_type == AVMEDIA_TYPE_AUDIO ){
-            pkt->stream_index = 1;
-        }
+        //这里很重要!!!编码后的AVPacket的流的index需要我们自己来指定
+        pkt->stream_index = out_ctx->av_stream->id;
         av_packet_rescale_ts(pkt, codec_ctx->time_base, out_ctx->av_stream->time_base);
         if( (ret = av_interleaved_write_frame(fmt_ctx, pkt)) < 0 ){
             av_strerror(ret, errbuf, sizeof(errbuf));
@@ -439,8 +439,8 @@ static int encode(OutputContext* out_ctx, AVFormatContext* fmt_ctx)
 // }
 
 
-struct Lane{
-    int lane_id;
-    int max_veh_num;
-    int length;
-}Lane;
+// struct Lane{
+//     int lane_id;
+//     int max_veh_num;
+//     int length;
+// }Lane;
