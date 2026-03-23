@@ -26,6 +26,9 @@ const int av_err_buf_size = 1024;
         }\
 }while(0)
 
+/*** demo目的： */
+/**从mp4文件中提取h264裸流，保存成文件 */
+/**h264_mp4toannexb这一步骤时为了将MP4容器中的NALU保存方法改为带start_code的方式 */
 int main(int argc, char** argv)
 {
     if( argc != 4){
